@@ -202,6 +202,31 @@ button, input, select, textarea {
   -moz-appearance: textfield;
 }
 
+
+/* Smooth hover for selects and buttons */
+select, button {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Chart container padding */
+canvas {
+  padding: 8px;
+}
+
+/* Date picker theme */
+.rdrCalendarWrapper {
+  background-color: hsl(var(--panel)) !important;
+  color: hsl(var(--text)) !important;
+}
+.rdrDayNumber span {
+  color: hsl(var(--text)) !important;
+}
+.rdrDaySelected {
+  background-color: hsl(var(--accent)) !important;
+}
+
+
+
 @layer base {
   body {
     @apply text-zinc-100 bg-[hsl(var(--bg))];

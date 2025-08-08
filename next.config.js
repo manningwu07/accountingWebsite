@@ -8,7 +8,11 @@ import "./src/env.js";
 const config = {
     images: {
     remotePatterns: [
-      { protocol: "https", hostname: "**.cloudinary.com" },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "**",
+      },
     ],
   },
 };

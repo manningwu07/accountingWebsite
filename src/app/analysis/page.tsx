@@ -245,24 +245,6 @@ export default function AnalysisPage() {
             </Select>
           </div>
 
-          <div className="mb-6">
-            <DateRange
-              ranges={[dateRange as Range]}
-              onChange={(item) => {
-                const sel = item.selection!;
-                if (sel.startDate && sel.endDate && sel.key) {
-                  setDateRange({
-                    startDate: sel.startDate,
-                    endDate: sel.endDate,
-                    key: sel.key,
-                  });
-                }
-              }}
-              rangeColors={["#3b82f6"]}
-              className="rounded-lg bg-[hsl(var(--panel))] p-2"
-            />
-          </div>
-
           <Card className="relaxed-card border border-[hsl(var(--border))] bg-[hsl(var(--card))] text-zinc-100">
             <CardHeader>
               <CardTitle>

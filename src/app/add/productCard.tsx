@@ -1,9 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-// app/productCard.tsx
+"use client";
+
 import { Pencil } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Input } from "~/components/ui/input";
 import Image from "next/image";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import {
 import { nanoid } from "nanoid";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import React from "react";
 
 type EditableCost = {
   id: string;
@@ -25,7 +27,7 @@ type EditableCost = {
   mode: "per-unit" | "total";
 };
 
-type SavePatch = {
+export type SavePatch = {
   title?: string;
   imageUrl?: string;
   imagePublicId?: string;
@@ -36,12 +38,7 @@ type ProductCardProps = {
   id: string;
   title: string;
   imageUrl?: string;
-  rawCosts: {
-    id: string;
-    label: string;
-    amount: number;
-    mode?: "per-unit" | "total";
-  }[];
+  rawCosts: EditableCost[];
   quantity: number | "";
   onQuantityChange: (val: number | "") => void;
   editing: boolean;
@@ -51,34 +48,6 @@ type ProductCardProps = {
 };
 
 export function ProductCard(props: ProductCardProps) {
-  const [localTitle, setLocalTitle] = useState(props.title);
-  const [localCosts, setLocalCosts] = useState<EditableCost[]>(
-    () =>
-      props.rawCosts.map((rc) => ({
-        id: rc.id,
-        label: rc.label,
-        amount: rc.amount,
-        mode: rc.mode ?? "per-unit",
-      })) ?? []
-  );
-  const [localImageUrl, setLocalImageUrl] = useState<string | undefined>(
-    props.imageUrl
-  );
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => setLocalTitle(props.title), [props.title]);
-  useEffect(() => {
-    setLocalCosts(
-      props.rawCosts.map((rc) => ({
-        id: rc.id,
-        label: rc.label,
-        amount: rc.amount,
-        mode: rc.mode ?? "per-unit",
-      }))
-    );
-  }, [props.rawCosts]);
-  useEffect(() => setLocalImageUrl(props.imageUrl), [props.imageUrl]);
-
   const qtyValue = props.quantity;
   const handleQtyChange = (raw: string) => {
     if (raw === "") return props.onQuantityChange("");
@@ -87,13 +56,11 @@ export function ProductCard(props: ProductCardProps) {
     props.onQuantityChange(Number.isFinite(n) && n >= 0 ? n : 0);
   };
 
-  const markDirty = () => setDirty(true);
-
   return (
-    <Card className="group relative relaxed-card hover-soft flex flex-col">
+    <Card className="group relaxed-card hover-soft relative flex flex-col">
       {!props.editing && (
         <button
-          className="absolute right-3 top-3 hidden rounded-md bg-white/5 p-2 text-subtle transition hover:bg-white/10 group-hover:block"
+          className="text-subtle absolute top-3 right-3 hidden rounded-md bg-white/5 p-2 transition group-hover:block hover:bg-white/10"
           onClick={props.onRequestEdit}
           title="Edit"
         >
@@ -104,36 +71,35 @@ export function ProductCard(props: ProductCardProps) {
       <CardContent className="flex flex-col gap-4 p-4">
         {props.editing ? (
           <UploadDropzone
-            currentUrl={localImageUrl}
+            currentUrl={props.imageUrl}
             onUploaded={(url) => {
-              setLocalImageUrl(url);
-              markDirty();
+              props.onSave({ imageUrl: url }, true);
             }}
           />
-        ) : localImageUrl ? (
-          <div className="relative mx-auto overflow-hidden rounded-lg">
+        ) : props.imageUrl ? (
+          <div className="relative mx-auto overflow-hidden rounded-lg max-w-full aspect-square z-30 min-h-[300px]">
             <Image
-              src={localImageUrl}
-              alt={localTitle}
+              src={props.imageUrl}
+              alt={props.title}
               fill
               className="object-cover"
-              sizes="400px"
             />
           </div>
         ) : (
-          <div className="mx-auto hidden h-[400px] w-[400px] rounded-lg bg-[hsl(var(--muted))] md:block" />
+          <div className="mx-auto hidden aspect-square w-full max-w-[400px] rounded-lg bg-[hsl(var(--muted))] md:block" />
         )}
 
         {!props.editing ? (
-          <div className="text-lg font-semibold text-zinc-100">{localTitle}</div>
+          <div className="text-lg font-semibold text-zinc-100">
+            {props.title}
+          </div>
         ) : (
           <div>
             <label className="mb-1 block text-sm text-zinc-100">Title</label>
             <Input
-              value={localTitle}
+              value={props.title}
               onChange={(e) => {
-                setLocalTitle(e.target.value);
-                markDirty();
+                props.onSave({ title: e.target.value }, true);
               }}
             />
           </div>
@@ -154,30 +120,17 @@ export function ProductCard(props: ProductCardProps) {
 
         {props.editing && (
           <EditFields
-            costs={localCosts}
-            setCosts={(v) => {
-              setLocalCosts(v);
-              markDirty();
-            }}
-            onSave={() =>
-              props.onSave(
-                {
-                  title: localTitle,
-                  imageUrl: localImageUrl,
-                  rawCosts: localCosts,
-                },
-                dirty
-              )
-            }
+            costs={props.rawCosts}
+            onSave={props.onSave}
             onCancel={props.onCancel}
             onClickOutsideSave={() =>
               props.onSave(
                 {
-                  title: localTitle,
-                  imageUrl: localImageUrl,
-                  rawCosts: localCosts,
+                  title: props.title,
+                  imageUrl: props.imageUrl,
+                  rawCosts: props.rawCosts,
                 },
-                dirty
+                true
               )
             }
           />
@@ -189,8 +142,7 @@ export function ProductCard(props: ProductCardProps) {
 
 function EditFields(props: {
   costs: EditableCost[];
-  setCosts: (v: EditableCost[]) => void;
-  onSave: () => void;
+  onSave: (patch: SavePatch, dirty: boolean) => void;
   onCancel: () => void;
   onClickOutsideSave: () => void;
 }) {
@@ -208,36 +160,33 @@ function EditFields(props: {
                 placeholder="Label"
                 value={rc.label}
                 onChange={(e) => {
-                  props.setCosts(
-                    props.costs.map((c, i) =>
-                      i === idx ? { ...c, label: e.target.value } : c
-                    )
+                  const updated = props.costs.map((c, i) =>
+                    i === idx ? { ...c, label: e.target.value } : c
                   );
+                  props.onSave({ rawCosts: updated }, true);
                 }}
               />
               <Input
-                className="col-span-2 no-spinner"
+                className="no-spinner col-span-2"
                 type="number"
                 inputMode="decimal"
                 placeholder="Amount"
                 value={rc.amount}
                 onChange={(e) => {
                   const n = Number(e.target.value) || 0;
-                  props.setCosts(
-                    props.costs.map((c, i) =>
-                      i === idx ? { ...c, amount: n } : c
-                    )
+                  const updated = props.costs.map((c, i) =>
+                    i === idx ? { ...c, amount: n } : c
                   );
+                  props.onSave({ rawCosts: updated }, true);
                 }}
               />
               <Select
                 value={rc.mode}
                 onValueChange={(val: "per-unit" | "total") => {
-                  props.setCosts(
-                    props.costs.map((c, i) =>
-                      i === idx ? { ...c, mode: val } : c
-                    )
+                  const updated = props.costs.map((c, i) =>
+                    i === idx ? { ...c, mode: val } : c
                   );
+                  props.onSave({ rawCosts: updated }, true);
                 }}
               >
                 <SelectTrigger className="col-span-1 focus:ring-[hsl(var(--accent))]">
@@ -255,10 +204,15 @@ function EditFields(props: {
           <Button
             variant="secondary"
             onClick={() =>
-              props.setCosts([
-                ...props.costs,
-                { id: nanoid(), label: "", amount: 0, mode: "per-unit" },
-              ])
+              props.onSave(
+                {
+                  rawCosts: [
+                    ...props.costs,
+                    { id: nanoid(), label: "", amount: 0, mode: "per-unit" },
+                  ],
+                },
+                true
+              )
             }
           >
             Add cost
@@ -267,7 +221,7 @@ function EditFields(props: {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button className="btn-accent" onClick={props.onSave}>
+        <Button className="btn-accent" onClick={() => props.onSave({}, true)}>
           Save
         </Button>
         <Button variant="secondary" onClick={props.onCancel}>
@@ -311,18 +265,21 @@ function UploadDropzone({
 
   return (
     <button
-      onClick={handlePick}
-      className="relative mx-auto hidden h-[400px] w-[400px] items-center justify-center overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--panel))] md:flex"
+      onClick={async (e) => {
+        e.stopPropagation();
+        await handlePick();
+      }}
+      className="relative mx-auto hidden aspect-square w-full max-w-[400px] items-center justify-center overflow-hidden rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--panel))] md:flex"
       title="Click to upload image"
     >
       {loading ? (
         <div className="text-subtle">Uploading…</div>
       ) : currentUrl ? (
-        <div className="flex h-full w-full items-center justify-center text-subtle">
+        <div className="text-subtle flex h-full w-full items-center justify-center">
           Click to upload image (replace)
         </div>
       ) : (
-        <div className="flex h-full w-full items-center justify-center text-subtle">
+        <div className="text-subtle flex h-full w-full items-center justify-center">
           Click to upload image
         </div>
       )}
@@ -342,7 +299,7 @@ async function pickImageFile(): Promise<File | undefined> {
 
 function useOutsideSave(onClickOutside: () => void) {
   const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
+  React.useEffect(() => {
     function onDocClick(e: MouseEvent) {
       const node = ref.current;
       if (!node) return;

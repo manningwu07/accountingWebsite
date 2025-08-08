@@ -3,7 +3,7 @@ export type RawCost = {
   id: string;
   label: string;
   amount: number;
-  mode?: "per-unit" | "total";
+  mode: "per-unit" | "total";
 };
 
 export type Product = {
